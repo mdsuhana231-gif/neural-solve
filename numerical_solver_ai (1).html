@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NeuralSolve — AI Numerical Method Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --bg: #050510;
+  --bg2: #0a0a1a;
+  --bg3: #0f0f22;
+  --surface: #12122a;
+  --surface2: #1a1a35;
+  --border: rgba(100,120,255,0.15);
+  --border2: rgba(100,120,255,0.3);
+  --accent: #6366f1;
+  --accent2: #8b5cf6;
+  --accent3: #06b6d4;
+  --neon: #00ffcc;
+  --neon2: #7c3aed;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --green: #10b981;
+  --amber: #f59e0b;
+  --pink: #ec4899;
+  --red: #ef4444;
+  --glow: 0 0 20px rgba(99,102,241,0.3);
+  --glow2: 0 0 40px rgba(99,102,241,0.15);
+}
+[data-theme="light"] {
+  --bg: #f0f2ff;
+  --bg2: #e8eaff;
+  --bg3: #ffffff;
+  --surface: #ffffff;
+  --surface2: #f5f5ff;
+  --border: rgba(99,102,241,0.2);
+  --border2: rgba(99,102,241,0.4);
+  --text: #1e1b4b;
+  --text2: #4338ca;
+  --text3: #6366f1;
+  --glow: 0 4px 20px rgba(99,102,241,0.15);
+  --glow2: 0 2px 10px rgba(99,102,241,0.1);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+
+body{
+  font-family:'Space Grotesk',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* Grid background */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── NAVBAR ── */
+.navbar{
+  background:rgba(5,5,16,0.85);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;top:0;z-index:200;
+  height:60px;
+}
+[data-theme="light"] .navbar{background:rgba(240,242,255,0.9);}
+
+.nav-logo{
+  font-family:'Syne',sans-serif;
+  font-weight:800;
+  font-size:1.15rem;
+  display:flex;align-items:center;gap:10px;
+  letter-spacing:-0.02em;
+  color:var(--text);
+}
+.nav-logo .logo-icon{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;
+  box-shadow:var(--glow);
+  animation:pulse-glow 3s ease-in-out infinite;
+}
+@keyframes pulse-glow{
+  0%,100%{box-shadow:0 0 15px rgba(99,102,241,0.4);}
+  50%{box-shadow:0 0 30px rgba(99,102,241,0.7), 0 0 60px rgba(139,92,246,0.3);}
+}
+.nav-logo .logo-text{background:linear-gradient(135deg,var(--accent),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav-logo .logo-sub{font-size:0.65rem;color:var(--text3);font-weight:400;font-family:'Fira Code',monospace;-webkit-text-fill-color:var(--text3);}
+
+.nav-right{display:flex;align-items:center;gap:6px;}
+.nav-link{
+  color:var(--text2);
+  padding:6px 14px;
+  border-radius:6px;
+  font-size:0.82rem;
+  font-weight:500;
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  transition:all .2s;
+  font-family:'Space Grotesk',sans-serif;
+  display:flex;align-items:center;gap:5px;
+}
+.nav-link:hover{color:var(--text);background:var(--surface);}
+.nav-link.active{color:var(--accent);background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);}
+
+.dark-toggle{
+  width:36px;height:36px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  color:var(--text2);
+  cursor:pointer;
+  font-size:1rem;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+  margin-left:8px;
+}
+.dark-toggle:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ── PAGES ── */
+.page{display:none;position:relative;z-index:1;}
+.page.active{display:block;}
+
+/* ── HOME HERO ── */
+.home-hero{
+  padding:90px 24px 70px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.hero-glow{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-60%);
+  width:600px;height:600px;
+  background:radial-gradient(ellipse, rgba(99,102,241,0.12) 0%, transparent 70%);
+  pointer-events:none;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(99,102,241,0.1);
+  border:1px solid rgba(99,102,241,0.25);
+  border-radius:100px;
+  padding:5px 14px;
+  font-size:0.72rem;
+  font-weight:600;
+  color:var(--accent);
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+  margin-bottom:28px;
+  font-family:'Fira Code',monospace;
+}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--neon);animation:blink 1.5s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+.home-hero h1{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(2rem,5vw,3.8rem);
+  font-weight:800;
+  line-height:1.1;
+  margin-bottom:6px;
+  letter-spacing:-0.03em;
+}
+.hero-line1{color:var(--text);}
+.hero-line2{
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 50%,var(--accent3) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+/* Typing cursor */
+.typed-wrap{
+  font-family:'Fira Code',monospace;
+  font-size:1rem;
+  color:var(--accent3);
+  height:28px;
+  margin:18px auto 8px;
+  display:flex;align-items:center;justify-content:center;gap:2px;
+}
+.typed-text{}
+.typed-cursor{
+  display:inline-block;
+  width:2px;height:1.1em;
+  background:var(--accent3);
+  animation:cursor-blink .7s step-end infinite;
+  vertical-align:middle;
+  margin-left:2px;
+}
+@keyframes cursor-blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+.home-hero p{
+  color:var(--text2);
+  font-size:1rem;
+  max-width:520px;
+  margin:14px auto 36px;
+  line-height:1.75;
+}
+
+.home-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn{
+  padding:10px 22px;
+  border-radius:9px;
+  border:none;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:0.88rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:all .2s;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;
+  box-shadow:var(--glow);
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(99,102,241,0.5);}
+.btn-ghost{
+  background:transparent;
+  color:var(--text2);
+  border:1px solid var(--border2);
+}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:rgba(99,102,241,0.06);}
+.btn-green{background:linear-gradient(135deg,#059669,#10b981);color:white;}
+.btn-green:hover{transform:translateY(-1px);box-shadow:0 0 20px rgba(16,185,129,0.4);}
+.btn-red{background:linear-gradient(135deg,#dc2626,#ef4444);color:white;}
+.btn-sm{padding:6px 12px;font-size:0.78rem;}
+
+/* Feature cards */
+.features-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:16px;
+  max-width:960px;
+  margin:64px auto 0;
+  padding:0 24px;
+}
+.feature-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:24px;
+  cursor:pointer;
+  transition:all .3s;
+  position:relative;
+  overflow:hidden;
+}
+.feature-card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(99,102,241,0.05),transparent);
+  opacity:0;
+  transition:opacity .3s;
+}
+.feature-card:hover{
+  border-color:var(--accent);
+  transform:translateY(-4px);
+  box-shadow:var(--glow2), 0 12px 40px rgba(0,0,0,0.3);
+}
+.feature-card:hover::before{opacity:1;}
+.feature-icon{
+  width:46px;height:46px;
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;
+  margin-bottom:16px;
+}
+.feature-card h3{font-size:0.95rem;font-weight:700;margin-bottom:8px;color:var(--text);}
+.feature-card p{font-size:0.82rem;color:var(--text2);line-height:1.65;}
+
+/* Method pills section */
+.home-methods{
+  max-width:960px;
+  margin:56px auto 0;
+  padding:0 24px 80px;
+}
+.section-header{margin-bottom:10px;}
+.section-header h2{
+  font-family:'Syne',sans-serif;
+  font-size:1.4rem;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:10px;
+}
+.section-header h2 span{
+  font-size:0.7rem;
+  background:rgba(99,102,241,0.12);
+  color:var(--accent);
+  padding:3px 9px;border-radius:100px;
+  font-family:'Fira Code',monospace;
+  font-weight:500;
+}
+.section-header p{color:var(--text2);font-size:0.85rem;margin-top:6px;}
+
+.category-label{
+  font-size:0.7rem;
+  font-weight:600;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  font-family:'Fira Code',monospace;
+  margin:20px 0 10px;
+  display:flex;align-items:center;gap:8px;
+}
+.category-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.method-pills{display:flex;flex-wrap:wrap;gap:8px;}
+.method-pill{
+  padding:5px 13px;border-radius:100px;
+  font-size:0.78rem;font-weight:600;
+  border:1px solid;cursor:pointer;
+  transition:all .2s;
+  font-family:'Fira Code',monospace;
+}
+.method-pill:hover{transform:translateY(-2px);}
+
+/* AI Project Info box */
+.ai-project-box{
+  margin-top:40px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px 24px;
+  display:flex;align-items:center;gap:16px;
+  position:relative;
+  overflow:hidden;
+}
+.ai-project-box::before{
+  content:'';
+  position:absolute;left:0;top:0;bottom:0;
+  width:3px;
+  background:linear-gradient(180deg,var(--accent),var(--accent3));
+}
+.ai-project-box .ai-icon{
+  width:44px;height:44px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;flex-shrink:0;
+  box-shadow:var(--glow);
+}
+.ai-project-box h4{font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:4px;}
+.ai-project-box p{font-size:0.82rem;color:var(--text2);line-height:1.6;}
+
+/* ── SOLVER PAGE ── */
+.solver-wrap{
+  max-width:1150px;
+  margin:0 auto;
+  padding:24px 20px;
+  display:grid;
+  grid-template-columns:400px 1fr;
+  gap:18px;
+  align-items:start;
+}
+@media(max-width:820px){.solver-wrap{grid-template-columns:1fr;}}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+}
+.card-head{
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:linear-gradient(90deg,rgba(99,102,241,0.05),transparent);
+}
+.card-head h3{
+  font-size:0.88rem;font-weight:700;
+  display:flex;align-items:center;gap:8px;
+  color:var(--text);
+}
+.card-body{padding:18px;}
+
+/* Form elements */
+label{
+  display:block;font-size:0.7rem;font-weight:600;
+  color:var(--text3);
+  margin-bottom:5px;
+  text-transform:uppercase;letter-spacing:.07em;
+  font-family:'Fira Code',monospace;
+}
+input[type=text],input[type=number],select{
+  width:100%;
+  padding:9px 12px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  font-family:'Fira Code',monospace;
+  font-size:0.85rem;
+  color:var(--text);
+  background:var(--bg2);
+  outline:none;
+  transition:all .2s;
+}
+input:focus,select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(99,102,241,0.12);
+  background:var(--bg3);
+}
+select{cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236366f1' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;
+}
+.fg{margin-bottom:13px;}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* Result box */
+.result-box{
+  background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(6,182,212,0.05));
+  border:1px solid rgba(16,185,129,0.25);
+  border-radius:12px;
+  padding:20px;text-align:center;margin-bottom:16px;
+}
+.result-box .rlabel{font-size:0.65rem;color:var(--text3);font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;font-family:'Fira Code',monospace;}
+.result-box .rval{font-family:'Fira Code',monospace;font-size:2rem;font-weight:700;color:var(--green);}
+.result-box .rmeta{font-size:0.75rem;color:var(--text3);margin-top:6px;font-family:'Fira Code',monospace;}
+
+/* Iteration table */
+.iter-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;}
+.iter-table{width:100%;border-collapse:collapse;font-family:'Fira Code',monospace;font-size:0.76rem;}
+.iter-table th{background:var(--bg2);padding:9px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);}
+.iter-table td{padding:7px 12px;border-bottom:1px solid var(--border);color:var(--text2);}
+.iter-table tr:last-child td{color:var(--green);font-weight:700;background:rgba(16,185,129,0.06);}
+.iter-table tr:hover td{background:rgba(99,102,241,0.04);}
+
+/* Steps */
+.step-item{border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden;}
+.step-hd{
+  padding:10px 14px;background:var(--surface2);cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:0.8rem;font-weight:600;color:var(--text2);transition:background .2s;
+}
+.step-hd:hover{background:rgba(99,102,241,0.1);}
+.step-bd{padding:12px 14px;font-size:0.8rem;line-height:1.8;color:var(--text2);display:none;}
+.step-bd.open{display:block;}
+.step-bd .formula{
+  font-family:'Fira Code',monospace;
+  background:var(--bg);
+  color:var(--accent3);
+  padding:10px 14px;border-radius:6px;margin:8px 0;font-size:0.8rem;
+  border:1px solid rgba(6,182,212,0.2);
+}
+.step-bd code{font-family:'Fira Code',monospace;background:rgba(99,102,241,0.1);padding:1px 5px;border-radius:3px;color:var(--accent);}
+
+/* Chart */
+.chart-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;height:260px;margin-bottom:12px;}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:14px;background:var(--bg2);padding:4px;border-radius:9px;}
+.tab{
+  flex:1;padding:6px 10px;border-radius:6px;border:none;
+  background:transparent;color:var(--text3);
+  font-size:0.76rem;font-weight:600;font-family:'Space Grotesk',sans-serif;
+  cursor:pointer;transition:all .2s;
+}
+.tab.active{background:var(--accent);color:white;box-shadow:var(--glow);}
+.pane{display:none;}.pane.active{display:block;}
+
+/* Alert */
+.alert{padding:10px 14px;border-radius:8px;font-size:0.8rem;margin-bottom:10px;display:none;}
+.alert.show{display:block;}
+.alert-err{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;}
+.alert-ok{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;}
+
+/* Matrix */
+.matrix-grid{display:grid;gap:5px;margin:10px 0;}
+.matrix-grid input{padding:7px;text-align:center;font-size:0.8rem;}
+.mctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+.mctl label{margin:0;text-transform:none;font-size:0.85rem;font-weight:400;}
+.mctl select{width:80px;}
+
+/* Data table */
+.dt-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;}
+.dt{width:100%;border-collapse:collapse;font-size:0.82rem;}
+.dt th{background:var(--bg2);padding:7px 12px;text-align:center;font-size:0.7rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);}
+.dt td{padding:5px 8px;border-bottom:1px solid var(--border);}
+.dt td input{border:none;background:transparent;padding:0;width:100%;text-align:center;font-family:'Fira Code',monospace;color:var(--text);}
+
+/* Recommendation box */
+.rec-box{
+  background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05));
+  border:1px solid rgba(99,102,241,0.2);
+  border-radius:10px;padding:14px;margin-bottom:12px;
+}
+.rec-label{font-size:0.65rem;color:var(--text3);font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;font-family:'Fira Code',monospace;}
+.rec-method{font-weight:700;font-size:1rem;color:var(--accent);margin-bottom:4px;}
+.rec-reason{font-size:0.78rem;color:var(--text2);line-height:1.55;}
+
+/* ── NOTES PAGE ── */
+.notes-wrap{max-width:960px;margin:0 auto;padding:28px 20px 80px;}
+.notes-wrap h2{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;margin-bottom:6px;color:var(--text);}
+.notes-wrap>p{color:var(--text2);font-size:0.88rem;margin-bottom:28px;}
+.notes-section{margin-bottom:28px;}
+.notes-section h3{
+  font-size:0.9rem;font-weight:700;
+  padding:10px 16px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px 10px 0 0;
+  display:flex;align-items:center;gap:8px;
+  color:var(--text);
+}
+.notes-cards{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:1px;background:var(--border);border:1px solid var(--border);
+  border-top:none;border-radius:0 0 10px 10px;overflow:hidden;
+}
+.note-card{background:var(--surface);padding:16px;}
+.note-card h4{font-size:0.87rem;font-weight:600;color:var(--text);margin-bottom:6px;}
+.note-formula{font-family:'Fira Code',monospace;font-size:0.75rem;background:var(--bg2);padding:6px 10px;border-radius:4px;color:var(--accent3);margin-bottom:8px;word-break:break-all;border:1px solid var(--border);}
+.note-card p{font-size:0.79rem;color:var(--text2);line-height:1.6;}
+.note-tag{display:inline-block;font-size:0.67rem;padding:2px 8px;border-radius:100px;font-weight:600;margin-top:6px;}
+
+/* ── ABOUT PAGE ── */
+.about-wrap{max-width:740px;margin:0 auto;padding:40px 20px 80px;}
+.about-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;margin-bottom:18px;
+  transition:border-color .2s;
+}
+.about-card:hover{border-color:var(--accent);}
+.about-card-head{
+  background:linear-gradient(135deg,var(--bg2),var(--surface2));
+  border-bottom:1px solid var(--border);
+  padding:20px 24px;
+}
+.about-card-head h2{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;margin-bottom:4px;color:var(--text);}
+.about-card-head p{color:var(--text2);font-size:0.82rem;}
+.about-card-body{padding:22px 24px;}
+.tech-list{display:flex;flex-wrap:wrap;gap:8px;}
+
+.tag{display:inline-block;padding:3px 10px;border-radius:100px;font-size:0.7rem;font-weight:600;}
+.tag-purple{background:rgba(99,102,241,0.12);color:var(--accent);border:1px solid rgba(99,102,241,0.2);}
+.tag-green{background:rgba(16,185,129,0.12);color:var(--green);border:1px solid rgba(16,185,129,0.2);}
+.tag-blue{background:rgba(6,182,212,0.12);color:var(--accent3);border:1px solid rgba(6,182,212,0.2);}
+.tag-orange{background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.2);}
+
+/* AI Project team info - anonymous */
+.ai-team-info{
+  display:flex;align-items:center;gap:14px;
+  padding:16px;
+  background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(6,182,212,0.05));
+  border:1px solid rgba(99,102,241,0.2);
+  border-radius:10px;
+}
+.ai-team-icon{
+  width:42px;height:42px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent3));
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;flex-shrink:0;
+}
+.ai-team-text h4{font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:3px;}
+.ai-team-text p{font-size:0.8rem;color:var(--text2);line-height:1.5;}
+
+/* Loading spinner */
+.spinner-wrap{display:none;align-items:center;justify-content:center;gap:10px;padding:24px;color:var(--text2);font-size:0.85rem;}
+.spinner-wrap.show{display:flex;}
+.spinner{
+  width:24px;height:24px;
+  border:2px solid var(--border);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Empty state */
+.empty-state{
+  text-align:center;padding:64px 20px;
+  color:var(--text3);
+}
+.empty-icon{
+  font-size:3.5rem;margin-bottom:16px;
+  filter:grayscale(0.5);
+  animation:float 3s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+
+/* Animated entrance */
+@keyframes fade-in-up{
+  from{opacity:0;transform:translateY(20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.page.active .card,.page.active .feature-card,.page.active .about-card{
+  animation:fade-in-up .4s ease both;
+}
+.page.active .card:nth-child(2){animation-delay:.06s;}
+.page.active .card:nth-child(3){animation-delay:.12s;}
+
+/* HR */
+hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
+
+@media(max-width:600px){
+  .notes-cards{grid-template-columns:1fr;}
+  .frow{grid-template-columns:1fr;}
+  .home-hero{padding:60px 16px 50px;}
+}
+
+/* Solve button glow */
+.solve-btn{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;
+  width:100%;padding:13px;font-size:0.95rem;font-weight:700;
+  border-radius:10px;border:none;cursor:pointer;
+  font-family:'Space Grotesk',sans-serif;
+  transition:all .2s;
+  box-shadow:var(--glow);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.solve-btn:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(99,102,241,0.5);}
+
+/* Formula pane */
+#formulaContent{
+  font-family:'Fira Code',monospace;font-size:0.82rem;
+  line-height:2;color:var(--text2);
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;padding:16px;
+}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-logo">
+    <div class="logo-icon">∫</div>
+    <div>
+      <div class="logo-text">NeuralSolve</div>
+      <div class="logo-sub">AI Numerical Engine v3</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <button class="nav-link active" onclick="goPage('home',this)">🏠 Home</button>
+    <button class="nav-link" onclick="goPage('solver',this)">⚡ Solver</button>
+    <button class="nav-link" onclick="goPage('notes',this)">📖 Notes</button>
+    <button class="nav-link" onclick="goPage('about',this)">🔮 About</button>
+    <button class="dark-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">🌙</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════ HOME ═══════════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="home-hero">
+    <div class="hero-glow"></div>
+    <div class="hero-badge">
+      <span class="dot"></span>
+      AI-Powered · 20+ Methods · Real-time
+    </div>
+    <h1>
+      <div class="hero-line1">Intelligent Numerical</div>
+      <div class="hero-line2">Method Selection Engine</div>
+    </h1>
+    <div class="typed-wrap">
+      <span class="typed-text" id="typedText"></span>
+      <span class="typed-cursor"></span>
+    </div>
+    <p>An AI-driven system that analyzes your mathematical problem, recommends the optimal algorithm, and delivers step-by-step solutions with live graphs.</p>
+    <div class="home-btns">
+      <button class="btn btn-primary" onclick="goPage('solver', document.querySelectorAll('.nav-link')[1])">⚡ Launch Solver</button>
+      <button class="btn btn-ghost" onclick="goPage('notes', document.querySelectorAll('.nav-link')[2])">📖 Method Reference</button>
+    </div>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card" onclick="goPage('solver',document.querySelectorAll('.nav-link')[1])">
+      <div class="feature-icon" style="background:rgba(99,102,241,0.12)">🧠</div>
+      <h3>Smart AI Recommendation</h3>
+      <p>Analyzes your problem type and automatically suggests the best numerical algorithm with reasoning and rankings.</p>
+    </div>
+    <div class="feature-card" onclick="goPage('solver',document.querySelectorAll('.nav-link')[1])">
+      <div class="feature-icon" style="background:rgba(16,185,129,0.1)">⚡</div>
+      <h3>Step-by-Step Engine</h3>
+      <p>Every iteration exposed — expandable computation steps and full iteration tables for complete transparency.</p>
+    </div>
+    <div class="feature-card" onclick="goPage('solver',document.querySelectorAll('.nav-link')[1])">
+      <div class="feature-icon" style="background:rgba(6,182,212,0.1)">📈</div>
+      <h3>Live Visual Graphs</h3>
+      <p>Function plots and convergence curves generated automatically after solving — see your math come alive.</p>
+    </div>
+    <div class="feature-card" onclick="goPage('notes',document.querySelectorAll('.nav-link')[2])">
+      <div class="feature-icon" style="background:rgba(245,158,11,0.1)">📐</div>
+      <h3>Method Reference</h3>
+      <p>Formulas, convergence orders, and use-case guides for all 20+ methods in a searchable reference library.</p>
+    </div>
+  </div>
+
+  <div class="home-methods">
+    <div class="section-header">
+      <h2>Supported Methods <span>20+ algorithms</span></h2>
+      <p>Click any method to jump straight to the solver with it pre-selected.</p>
+    </div>
+
+    <div class="category-label" style="color:var(--accent)">Root Finding</div>
+    <div class="method-pills">
+      <span class="method-pill" style="border-color:rgba(99,102,241,0.4);color:var(--accent);background:rgba(99,102,241,0.08)" onclick="jumpSolver('root','bisection')">Bisection</span>
+      <span class="method-pill" style="border-color:rgba(99,102,241,0.4);color:var(--accent);background:rgba(99,102,241,0.08)" onclick="jumpSolver('root','newton')">Newton-Raphson</span>
+      <span class="method-pill" style="border-color:rgba(99,102,241,0.4);color:var(--accent);background:rgba(99,102,241,0.08)" onclick="jumpSolver('root','secant')">Secant</span>
+      <span class="method-pill" style="border-color:rgba(99,102,241,0.4);color:var(--accent);background:rgba(99,102,241,0.08)" onclick="jumpSolver('root','regula')">Regula Falsi</span>
+    </div>
+
+    <div class="category-label" style="color:var(--accent3)">Linear Systems</div>
+    <div class="method-pills">
+      <span class="method-pill" style="border-color:rgba(6,182,212,0.4);color:var(--accent3);background:rgba(6,182,212,0.08)" onclick="jumpSolver('linear','gauss')">Gauss Elimination</span>
+      <span class="method-pill" style="border-color:rgba(6,182,212,0.4);color:var(--accent3);background:rgba(6,182,212,0.08)" onclick="jumpSolver('linear','gaussJordan')">Gauss-Jordan</span>
+      <span class="method-pill" style="border-color:rgba(6,182,212,0.4);color:var(--accent3);background:rgba(6,182,212,0.08)" onclick="jumpSolver('linear','lu')">LU Decomposition</span>
+      <span class="method-pill" style="border-color:rgba(6,182,212,0.4);color:var(--accent3);background:rgba(6,182,212,0.08)" onclick="jumpSolver('linear','jacobi')">Jacobi</span>
+      <span class="method-pill" style="border-color:rgba(6,182,212,0.4);color:var(--accent3);background:rgba(6,182,212,0.08)" onclick="jumpSolver('linear','gaussSeidel')">Gauss-Seidel</span>
+    </div>
+
+    <div class="category-label" style="color:var(--green)">Integration</div>
+    <div class="method-pills">
+      <span class="method-pill" style="border-color:rgba(16,185,129,0.4);color:var(--green);background:rgba(16,185,129,0.08)" onclick="jumpSolver('integration','trapezoidal')">Trapezoidal</span>
+      <span class="method-pill" style="border-color:rgba(16,185,129,0.4);color:var(--green);background:rgba(16,185,129,0.08)" onclick="jumpSolver('integration','simpson13')">Simpson 1/3</span>
+      <span class="method-pill" style="border-color:rgba(16,185,129,0.4);color:var(--green);background:rgba(16,185,129,0.08)" onclick="jumpSolver('integration','simpson38')">Simpson 3/8</span>
+    </div>
+
+    <div class="category-label" style="color:var(--amber)">Differentiation</div>
+    <div class="method-pills">
+      <span class="method-pill" style="border-color:rgba(245,158,11,0.4);color:var(--amber);background:rgba(245,158,11,0.08)" onclick="jumpSolver('differentiation','central')">Central Difference</span>
+      <span class="method-pill" style="border-color:rgba(245,158,11,0.4);color:var(--amber);background:rgba(245,158,11,0.08)" onclick="jumpSolver('differentiation','forward')">Forward Difference</span>
+      <span class="method-pill" style="border-color:rgba(245,158,11,0.4);color:var(--amber);background:rgba(245,158,11,0.08)" onclick="jumpSolver('differentiation','backward')">Backward Difference</span>
+    </div>
+
+    <div class="category-label" style="color:var(--pink)">ODE Solvers</div>
+    <div class="method-pills">
+      <span class="method-pill" style="border-color:rgba(236,72,153,0.4);color:var(--pink);background:rgba(236,72,153,0.08)" onclick="jumpSolver('ode','rk4')">Runge-Kutta 4</span>
+      <span class="method-pill" style="border-color:rgba(236,72,153,0.4);color:var(--pink);background:rgba(236,72,153,0.08)" onclick="jumpSolver('ode','euler')">Euler Method</span>
+      <span class="method-pill" style="border-color:rgba(236,72,153,0.4);color:var(--pink);background:rgba(236,72,153,0.08)" onclick="jumpSolver('ode','modEuler')">Modified Euler</span>
+    </div>
+
+    <div class="category-label" style="color:#818cf8">Interpolation</div>
+    <div class="method-pills">
+      <span class="method-pill" style="border-color:rgba(129,140,248,0.4);color:#818cf8;background:rgba(129,140,248,0.08)" onclick="jumpSolver('interpolation','lagrange')">Lagrange</span>
+      <span class="method-pill" style="border-color:rgba(129,140,248,0.4);color:#818cf8;background:rgba(129,140,248,0.08)" onclick="jumpSolver('interpolation','newtonForward')">Newton Forward</span>
+      <span class="method-pill" style="border-color:rgba(129,140,248,0.4);color:#818cf8;background:rgba(129,140,248,0.08)" onclick="jumpSolver('interpolation','dividedDiff')">Divided Differences</span>
+    </div>
+
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SOLVER ═══════════════════════════ -->
+<div class="page" id="page-solver">
+  <div class="solver-wrap">
+
+    <!-- LEFT: Input -->
+    <div>
+      <div class="card">
+        <div class="card-head">
+          <h3>⌨️ Problem Input</h3>
+          <button class="btn btn-sm btn-ghost" onclick="resetSolver()">↺ Reset</button>
+        </div>
+        <div class="card-body">
+
+          <div class="fg">
+            <label>Problem Type</label>
+            <select id="problemType" onchange="onTypeChange()">
+              <option value="root">Root Finding</option>
+              <option value="linear">Linear Systems</option>
+              <option value="interpolation">Interpolation</option>
+              <option value="differentiation">Differentiation</option>
+              <option value="integration">Integration</option>
+              <option value="ode">Differential Equations (ODE)</option>
+            </select>
+          </div>
+
+          <!-- Root Finding -->
+          <div id="rootInputs">
+            <div class="fg"><label>Equation f(x) = 0</label>
+              <input type="text" id="eqInput" placeholder="e.g. x^3 - x - 2" oninput="onTypeChange()"/>
+            </div>
+            <div class="frow">
+              <div class="fg"><label>Lower Bound (a)</label><input type="number" id="lowerBound" value="1" step="any"/></div>
+              <div class="fg"><label>Upper Bound (b)</label><input type="number" id="upperBound" value="2" step="any"/></div>
+            </div>
+            <div class="fg"><label>Initial Guess x₀</label><input type="number" id="initialGuess" value="1.5" step="any"/></div>
+          </div>
+
+          <!-- Linear -->
+          <div id="linearInputs" style="display:none">
+            <div class="mctl">
+              <label>Matrix Size:</label>
+              <select id="matrixSize" onchange="buildMatrix()" style="width:80px">
+                <option value="2">2×2</option>
+                <option value="3" selected>3×3</option>
+                <option value="4">4×4</option>
+              </select>
+              <button class="btn btn-sm btn-ghost" onclick="fillSampleMatrix()">Sample</button>
+            </div>
+            <div id="matrixContainer"></div>
+          </div>
+
+          <!-- Interpolation -->
+          <div id="interpInputs" style="display:none">
+            <div class="mctl">
+              <label>Points:</label>
+              <select id="interpPoints" onchange="buildDataTable()" style="width:80px">
+                <option value="3">3</option><option value="4" selected>4</option>
+                <option value="5">5</option><option value="6">6</option>
+              </select>
+              <button class="btn btn-sm btn-ghost" onclick="fillSampleData()">Sample</button>
+            </div>
+            <div id="dataTableContainer"></div>
+            <div class="fg"><label>Find value at x =</label><input type="number" id="interpX" value="2.5" step="any"/></div>
+          </div>
+
+          <!-- Differentiation -->
+          <div id="diffInputs" style="display:none">
+            <div class="fg"><label>Function f(x)</label><input type="text" id="diffEq" value="x^3 + 2*x"/></div>
+            <div class="frow">
+              <div class="fg"><label>Point x</label><input type="number" id="diffX" value="2" step="any"/></div>
+              <div class="fg"><label>Step size h</label><input type="number" id="diffH" value="0.01" step="any"/></div>
+            </div>
+          </div>
+
+          <!-- Integration -->
+          <div id="integInputs" style="display:none">
+            <div class="fg"><label>Function f(x)</label><input type="text" id="integEq" value="x^2 + sin(x)"/></div>
+            <div class="frow">
+              <div class="fg"><label>Lower limit a</label><input type="number" id="integA" value="0" step="any"/></div>
+              <div class="fg"><label>Upper limit b</label><input type="number" id="integB" value="2" step="any"/></div>
+            </div>
+            <div class="fg"><label>Subintervals n</label><input type="number" id="integN" value="8" min="2"/></div>
+          </div>
+
+          <!-- ODE -->
+          <div id="odeInputs" style="display:none">
+            <div class="fg"><label>dy/dx = f(x,y)</label><input type="text" id="odeEq" value="x + y"/></div>
+            <div class="frow">
+              <div class="fg"><label>x₀</label><input type="number" id="odeX0" value="0" step="any"/></div>
+              <div class="fg"><label>y₀</label><input type="number" id="odeY0" value="1" step="any"/></div>
+            </div>
+            <div class="frow">
+              <div class="fg"><label>x end</label><input type="number" id="odeXEnd" value="1" step="any"/></div>
+              <div class="fg"><label>Step h</label><input type="number" id="odeH" value="0.1" step="any"/></div>
+            </div>
+          </div>
+
+          <hr/>
+
+          <div class="frow">
+            <div class="fg"><label>Tolerance</label>
+              <select id="tolerance">
+                <option value="-3">1e-3</option><option value="-4">1e-4</option>
+                <option value="-6" selected>1e-6</option><option value="-8">1e-8</option>
+                <option value="-10">1e-10</option>
+              </select>
+            </div>
+            <div class="fg"><label>Max Iterations</label><input type="number" id="maxIter" value="100" min="5" max="500"/></div>
+          </div>
+
+          <div class="fg">
+            <label>Method</label>
+            <select id="methodSelect">
+              <option value="auto">⚡ Auto (AI Recommended)</option>
+              <optgroup label="Root Finding">
+                <option value="bisection">Bisection</option>
+                <option value="newton">Newton-Raphson</option>
+                <option value="secant">Secant</option>
+                <option value="regula">Regula Falsi</option>
+              </optgroup>
+              <optgroup label="Linear Systems">
+                <option value="gauss">Gauss Elimination</option>
+                <option value="gaussJordan">Gauss-Jordan</option>
+                <option value="lu">LU Decomposition</option>
+                <option value="jacobi">Jacobi</option>
+                <option value="gaussSeidel">Gauss-Seidel</option>
+              </optgroup>
+              <optgroup label="Interpolation">
+                <option value="lagrange">Lagrange</option>
+                <option value="newtonForward">Newton Forward</option>
+                <option value="newtonBackward">Newton Backward</option>
+                <option value="dividedDiff">Divided Differences</option>
+              </optgroup>
+              <optgroup label="Differentiation">
+                <option value="forward">Forward Difference</option>
+                <option value="backward">Backward Difference</option>
+                <option value="central">Central Difference</option>
+              </optgroup>
+              <optgroup label="Integration">
+                <option value="trapezoidal">Trapezoidal</option>
+                <option value="simpson13">Simpson 1/3</option>
+                <option value="simpson38">Simpson 3/8</option>
+              </optgroup>
+              <optgroup label="ODEs">
+                <option value="euler">Euler</option>
+                <option value="modEuler">Modified Euler</option>
+                <option value="rk4">Runge-Kutta 4</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="alert alert-err" id="solveAlert"></div>
+          <button class="solve-btn" onclick="solve()">⚡ Solve Now</button>
+        </div>
+      </div>
+
+      <!-- Recommendation -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-head"><h3>🧠 AI Recommendation</h3></div>
+        <div class="card-body">
+          <div class="rec-box" id="recBox">
+            <div class="rec-label">Optimal Method</div>
+            <div class="rec-method" id="recMethod">Newton-Raphson</div>
+            <div class="rec-reason" id="recReason">Converges quadratically for smooth functions.</div>
+          </div>
+          <div id="rankList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Results -->
+    <div>
+      <div class="card" id="resultsCard" style="display:none">
+        <div class="card-head">
+          <h3>📊 Results</h3>
+          <button class="btn btn-sm btn-ghost" onclick="copyResult()" id="copyBtn">⎘ Copy</button>
+        </div>
+        <div class="card-body">
+          <div class="result-box" id="resultBox">
+            <div class="rlabel">Result</div>
+            <div class="rval" id="rVal">—</div>
+            <div class="rmeta" id="rMeta"></div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" onclick="showTab('steps',this)">📋 Steps</button>
+            <button class="tab" onclick="showTab('iters',this)">🔢 Iterations</button>
+            <button class="tab" onclick="showTab('formula',this)">🧮 Formula</button>
+            <button class="tab" onclick="showTab('chart',this)">📈 Graph</button>
+          </div>
+
+          <div class="pane active" id="stepsPane">
+            <div id="stepsContainer"></div>
+          </div>
+          <div class="pane" id="itersPane">
+            <div class="iter-wrap">
+              <table class="iter-table">
+                <thead><tr id="iterHead"></tr></thead>
+                <tbody id="iterBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="pane" id="formulaPane">
+            <div id="formulaContent"></div>
+          </div>
+          <div class="pane" id="chartPane">
+            <div class="chart-box"><canvas id="mainChart"></canvas></div>
+            <div class="chart-box" style="height:200px"><canvas id="convChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="card" id="emptyState">
+        <div class="empty-state">
+          <div class="empty-icon">⚛️</div>
+          <p style="font-weight:700;color:var(--text2);margin-bottom:6px;font-family:'Syne',sans-serif">Awaiting Input</p>
+          <p style="font-size:0.83rem;color:var(--text3)">Configure your problem on the left and press Solve.</p>
+        </div>
+      </div>
+      <div class="spinner-wrap" id="spinner"><div class="spinner"></div> Computing solution…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ NOTES ═══════════════════════════ -->
+<div class="page" id="page-notes">
+  <div class="notes-wrap">
+    <h2>📖 Method Reference</h2>
+    <p>Formulas, convergence orders, and key properties for all numerical methods covered.</p>
+
+    <div class="notes-section">
+      <h3><span class="tag tag-purple">Root Finding</span></h3>
+      <div class="notes-cards">
+        <div class="note-card">
+          <h4>Bisection Method</h4>
+          <div class="note-formula">c = (a + b) / 2</div>
+          <p>Halves the interval each iteration. Very slow but <strong>always converges</strong> if f(a)·f(b) &lt; 0.</p>
+          <span class="note-tag" style="background:rgba(99,102,241,0.1);color:var(--accent)">Order: Linear</span>
+        </div>
+        <div class="note-card">
+          <h4>Newton-Raphson</h4>
+          <div class="note-formula">x₁ = x₀ - f(x₀)/f'(x₀)</div>
+          <p><strong>Fastest</strong> for smooth functions. Quadratic convergence. Fails if f'(x)=0.</p>
+          <span class="note-tag" style="background:rgba(16,185,129,0.1);color:var(--green)">Order: Quadratic</span>
+        </div>
+        <div class="note-card">
+          <h4>Secant Method</h4>
+          <div class="note-formula">x₂ = x₁ - f(x₁)(x₁-x₀)/(f(x₁)-f(x₀))</div>
+          <p>No derivative needed. Uses two previous points. Superlinear convergence (~1.618).</p>
+          <span class="note-tag" style="background:rgba(245,158,11,0.1);color:var(--amber)">Order: ~1.618</span>
+        </div>
+        <div class="note-card">
+          <h4>Regula Falsi</h4>
+          <div class="note-formula">c = a - f(a)(b-a)/(f(b)-f(a))</div>
+          <p>Combines bisection and secant. <strong>Guaranteed convergence</strong>, faster than bisection.</p>
+          <span class="note-tag" style="background:rgba(99,102,241,0.1);color:var(--accent)">Order: Linear+</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes-section">
+      <h3><span class="tag tag-blue">Linear Systems</span></h3>
+      <div class="notes-cards">
+        <div class="note-card">
+          <h4>Gauss Elimination</h4>
+          <div class="note-formula">m = A[i][k]/A[k][k]; Rᵢ -= m·Rₖ</div>
+          <p>Direct method. Reduces to upper triangular form then back-substitutes. O(n³).</p>
+          <span class="note-tag" style="background:rgba(16,185,129,0.1);color:var(--green)">Direct</span>
+        </div>
+        <div class="note-card">
+          <h4>Gauss-Jordan</h4>
+          <div class="note-formula">Reduce to identity matrix (RREF)</div>
+          <p>Eliminates both above and below pivot. No back-substitution needed.</p>
+          <span class="note-tag" style="background:rgba(16,185,129,0.1);color:var(--green)">Direct</span>
+        </div>
+        <div class="note-card">
+          <h4>LU Decomposition</h4>
+          <div class="note-formula">A = L·U; Ly=b, Ux=y</div>
+          <p>Factors A into lower and upper triangular matrices. Efficient for multiple right-hand sides.</p>
+          <span class="note-tag" style="background:rgba(16,185,129,0.1);color:var(--green)">Direct</span>
+        </div>
+        <div class="note-card">
+          <h4>Jacobi / Gauss-Seidel</h4>
+          <div class="note-formula">xᵢ = (bᵢ - Σaᵢⱼxⱼ) / aᵢᵢ</div>
+          <p>Iterative methods. Gauss-Seidel uses updated values immediately — ~2× faster.</p>
+          <span class="note-tag" style="background:rgba(245,158,11,0.1);color:var(--amber)">Iterative</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes-section">
+      <h3><span class="tag tag-green">Numerical Integration</span></h3>
+      <div class="notes-cards">
+        <div class="note-card">
+          <h4>Trapezoidal Rule</h4>
+          <div class="note-formula">∫ ≈ h/2 [f(x₀) + 2Σf(xᵢ) + f(xₙ)]</div>
+          <p>Approximates area with trapezoids. O(h²) error. Good for linear-ish functions.</p>
+          <span class="note-tag" style="background:rgba(245,158,11,0.1);color:var(--amber)">Error: O(h²)</span>
+        </div>
+        <div class="note-card">
+          <h4>Simpson 1/3 Rule</h4>
+          <div class="note-formula">∫ ≈ h/3 [f₀ + 4f₁ + 2f₂ + ... + fₙ]</div>
+          <p>Fits parabolas through triplets. <strong>Much more accurate</strong> than Trapezoidal. Needs even n.</p>
+          <span class="note-tag" style="background:rgba(16,185,129,0.1);color:var(--green)">Error: O(h⁴)</span>
+        </div>
+        <div class="note-card">
+          <h4>Simpson 3/8 Rule</h4>
+          <div class="note-formula">∫ ≈ 3h/8 [f₀ + 3f₁ + 3f₂ + 2f₃ + ...]</div>
+          <p>Uses cubic polynomials. Requires n divisible by 3.</p>
+          <span class="note-tag" style="background:rgba(16,185,129,0.1);color:var(--green)">Error: O(h⁴)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes-section">
+      <h3><span class="tag tag-purple" style="background:rgba(236,72,153,0.12);color:var(--pink);border-color:rgba(236,72,153,0.2)">Differential Equations (ODE)</span></h3>
+      <div class="notes-cards">
+        <div class="note-card">
+          <h4>Euler Method</h4>
+          <div class="note-formula">yₙ₊₁ = yₙ + h·f(xₙ, yₙ)</div>
+          <p>Simplest ODE solver. O(h) error — inaccurate for large h.</p>
+          <span class="note-tag" style="background:rgba(245,158,11,0.1);color:var(--amber)">Error: O(h)</span>
+        </div>
+        <div class="note-card">
+          <h4>Modified Euler (Heun)</h4>
+          <div class="note-formula">Predictor + Corrector step</div>
+          <p>Predict-correct approach. O(h²) error — more accurate with small extra cost.</p>
+          <span class="note-tag" style="background:rgba(245,158,11,0.1);color:var(--amber)">Error: O(h²)</span>
+        </div>
+        <div class="note-card">
+          <h4>Runge-Kutta 4 (RK4)</h4>
+          <div class="note-formula">y₁ = y₀ + h(k₁+2k₂+2k₃+k₄)/6</div>
+          <p><strong>Gold standard</strong> for ODEs. O(h⁴) accuracy with only 4 evaluations per step.</p>
+          <span class="note-tag" style="background:rgba(16,185,129,0.1);color:var(--green)">Error: O(h⁴)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes-section">
+      <h3><span class="tag tag-orange">Numerical Differentiation</span></h3>
+      <div class="notes-cards">
+        <div class="note-card">
+          <h4>Forward Difference</h4>
+          <div class="note-formula">f'(x) ≈ [f(x+h) - f(x)] / h</div>
+          <p>One-sided approximation. O(h) error. Use when backward values unavailable.</p>
+          <span class="note-tag" style="background:rgba(245,158,11,0.1);color:var(--amber)">Error: O(h)</span>
+        </div>
+        <div class="note-card">
+          <h4>Central Difference</h4>
+          <div class="note-formula">f'(x) ≈ [f(x+h) - f(x-h)] / 2h</div>
+          <p><strong>Best accuracy</strong> for same h. O(h²) error — twice as accurate as one-sided methods.</p>
+          <span class="note-tag" style="background:rgba(16,185,129,0.1);color:var(--green)">Error: O(h²)</span>
+        </div>
+        <div class="note-card">
+          <h4>Backward Difference</h4>
+          <div class="note-formula">f'(x) ≈ [f(x) - f(x-h)] / h</div>
+          <p>Uses previous point. O(h) error. Useful when forward data is unavailable.</p>
+          <span class="note-tag" style="background:rgba(245,158,11,0.1);color:var(--amber)">Error: O(h)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ ABOUT ═══════════════════════════ -->
+<div class="page" id="page-about">
+  <div class="about-wrap">
+
+    <div class="about-card">
+      <div class="about-card-head">
+        <h2>Intelligent Decision System for Numerical Method Selection</h2>
+        <p>B.Tech Project · Institute of Aeronautical Engineering (IARE)</p>
+      </div>
+      <div class="about-card-body">
+        <p style="font-size:0.88rem;color:var(--text2);line-height:1.85">
+          This project proposes an <strong style="color:var(--accent)">Intelligent Decision System</strong> that analyzes mathematical problems and recommends the most suitable numerical method. Using rule-based logic and problem analysis, it assists in choosing algorithms like Bisection, Newton-Raphson, or RK4 to improve efficiency, accuracy, and ease of problem solving for students and researchers.
+        </p>
+      </div>
+    </div>
+
+    <div class="about-card">
+      <div class="about-card-head">
+        <h2>🎓 Project Team</h2>
+        <p>B.Tech Research Project — Institute of Aeronautical Engineering</p>
+      </div>
+      <div class="about-card-body">
+        <div class="ai-team-info">
+          <div class="ai-team-icon">👩‍💻</div>
+          <div class="ai-team-text">
+            <h4>Student Developers</h4>
+            <p>B.Tech students at IARE — developed the full AI decision engine, UI, and all 20+ numerical algorithm implementations in pure JavaScript.</p>
+          </div>
+        </div>
+        <div class="ai-team-info" style="margin-top:12px">
+          <div class="ai-team-icon" style="background:linear-gradient(135deg,var(--green),var(--accent3))">🏫</div>
+          <div class="ai-team-text">
+            <h4>Faculty Supervisor</h4>
+            <p>Assistant Professor, Department of Mathematics — Institute of Aeronautical Engineering, Hyderabad.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-card">
+      <div class="about-card-head">
+        <h2>🛠️ Technologies</h2>
+        <p>Built entirely with frontend web technologies — zero backend required</p>
+      </div>
+      <div class="about-card-body">
+        <div class="tech-list">
+          <span class="tag tag-orange">HTML5</span>
+          <span class="tag tag-blue">CSS3</span>
+          <span class="tag tag-green">JavaScript ES6+</span>
+          <span class="tag tag-purple">Chart.js</span>
+          <span class="tag tag-orange">Google Fonts</span>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text2);margin-top:16px;line-height:1.75">
+          All numerical algorithms implemented in pure JavaScript. Runs entirely in the browser with no server dependency.
+        </p>
+      </div>
+    </div>
+
+    <div class="about-card">
+      <div class="about-card-head"><h2>📚 References</h2></div>
+      <div class="about-card-body">
+        <ol style="padding-left:20px;font-size:0.83rem;color:var(--text2);line-height:2.3">
+          <li>Design and Evaluation of Intelligent Tutoring System for Numerical Methods (2009)</li>
+          <li>Advances on Intelligent Algorithms for Scientific Computing (2023)</li>
+          <li>Analytical Study of Neural Network-Based Numerical Methods (2023)</li>
+          <li>Comparative Study of Neural Solvers for Mathematical Problems (2024)</li>
+          <li>Intelligent Optimization Algorithms Review (2023)</li>
+          <li>Hybrid Numerical-Semantic Clustering Algorithm (2025)</li>
+          <li>Parallel Algorithms for Intelligent Systems (2022)</li>
+          <li>Deep Learning-Based Numerical Solver for Poisson Equation (2017)</li>
+        </ol>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── DARK MODE ──
+function toggleTheme(){
+  const h=document.documentElement;
+  const isDark=h.getAttribute('data-theme')==='dark';
+  h.setAttribute('data-theme',isDark?'light':'dark');
+  document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';
+  // Update Chart.js defaults
+  updateChartTheme();
+}
+function updateChartTheme(){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  Chart.defaults.color=isDark?'#94a3b8':'#475569';
+  Chart.defaults.borderColor=isDark?'rgba(100,120,255,0.15)':'rgba(99,102,241,0.15)';
+}
+updateChartTheme();
+
+// ── TYPED ANIMATION ──
+const typeLines=[
+  'f(x) = x³ - x - 2',
+  'Analyzing problem type...',
+  'AI recommends: Newton-Raphson',
+  'Solving with tolerance 1e-6',
+  'Converged in 4 iterations ✓',
+  'Ready for your equation',
+];
+let tIdx=0,cIdx=0,deleting=false,typePause=0;
+function typeStep(){
+  const el=document.getElementById('typedText');
+  if(!el){setTimeout(typeStep,50);return;}
+  const line=typeLines[tIdx];
+  if(typePause>0){typePause--;setTimeout(typeStep,50);return;}
+  if(!deleting){
+    if(cIdx<line.length){el.textContent=line.slice(0,++cIdx);setTimeout(typeStep,45);}
+    else{typePause=60;deleting=true;setTimeout(typeStep,50);}
+  }else{
+    if(cIdx>0){el.textContent=line.slice(0,--cIdx);setTimeout(typeStep,25);}
+    else{deleting=false;tIdx=(tIdx+1)%typeLines.length;setTimeout(typeStep,300);}
+  }
+}
+typeStep();
+
+// ── PAGE NAVIGATION ──
+function goPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+
+function jumpSolver(type,method){
+  document.getElementById('problemType').value=type;
+  onTypeChange();
+  document.getElementById('methodSelect').value=method;
+  goPage('solver',document.querySelectorAll('.nav-link')[1]);
+}
+
+// ── MATH EVAL ──
+function mathEval(expr,x=0,y=0){
+  try{
+    const s=expr.replace(/\^/g,'**').replace(/sin\(/g,'Math.sin(').replace(/cos\(/g,'Math.cos(')
+      .replace(/tan\(/g,'Math.tan(').replace(/log\(/g,'Math.log10(').replace(/ln\(/g,'Math.log(')
+      .replace(/sqrt\(/g,'Math.sqrt(').replace(/abs\(/g,'Math.abs(').replace(/exp\(/g,'Math.exp(')
+      .replace(/pi/gi,'Math.PI').replace(/e(?![xp])/g,'Math.E');
+    return Function('x','y',`"use strict";return (${s})`)(x,y);
+  }catch{return NaN;}
+}
+function deriv(f,x,h=1e-7){return(mathEval(f,x+h)-mathEval(f,x-h))/(2*h);}
+function fmt(n,d=8){if(typeof n!=='number'||isNaN(n))return'NaN';return parseFloat(n.toFixed(d)).toString();}
+
+// ── TYPE CHANGE ──
+const typeInputMap={root:'rootInputs',linear:'linearInputs',interpolation:'interpInputs',differentiation:'diffInputs',integration:'integInputs',ode:'odeInputs'};
+const recs={
+  root:{method:'Newton-Raphson',reason:'Quadratic convergence for smooth functions.',ranks:[{n:'Newton-Raphson',s:97},{n:'Secant',s:85},{n:'Regula Falsi',s:72},{n:'Bisection',s:65}]},
+  linear:{method:'Gauss Elimination',reason:'Reliable direct method for small-medium systems.',ranks:[{n:'Gauss Elimination',s:95},{n:'LU Decomposition',s:90},{n:'Gauss-Jordan',s:82},{n:'Gauss-Seidel',s:75}]},
+  interpolation:{method:'Newton Forward',reason:'Efficient for equally-spaced points.',ranks:[{n:'Newton Forward',s:93},{n:'Divided Diff.',s:90},{n:'Lagrange',s:84}]},
+  differentiation:{method:'Central Difference',reason:'O(h²) accuracy — twice as good as forward/backward.',ranks:[{n:'Central Diff.',s:95},{n:'Forward Diff.',s:72},{n:'Backward Diff.',s:72}]},
+  integration:{method:"Simpson 1/3",reason:'O(h⁴) accuracy. Far superior to Trapezoidal.',ranks:[{n:"Simpson 1/3",s:95},{n:"Simpson 3/8",s:90},{n:'Trapezoidal',s:72}]},
+  ode:{method:'Runge-Kutta 4',reason:'Gold standard — O(h⁴) accuracy with 4 evaluations per step.',ranks:[{n:'RK4',s:98},{n:'Mod. Euler',s:80},{n:'Euler',s:55}]}
+};
+
+function onTypeChange(){
+  const t=document.getElementById('problemType').value;
+  Object.values(typeInputMap).forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById(typeInputMap[t]).style.display='block';
+  if(t==='linear')buildMatrix();
+  if(t==='interpolation')buildDataTable();
+  updateRec(t);
+}
+
+function updateRec(type){
+  const r=recs[type];
+  document.getElementById('recMethod').textContent=r.method;
+  document.getElementById('recReason').textContent=r.reason;
+  document.getElementById('rankList').innerHTML=r.ranks.map((x,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);margin-bottom:6px;font-size:0.78rem">
+      <span style="width:22px;height:22px;border-radius:50%;background:${i===0?'linear-gradient(135deg,#6366f1,#8b5cf6)':i===1?'linear-gradient(135deg,#f59e0b,#d97706)':'linear-gradient(135deg,#64748b,#475569)'};color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0">${i+1}</span>
+      <span style="flex:1;font-weight:600;color:var(--text)">${x.n}</span>
+      <div style="width:70px;height:4px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${x.s}%;height:100%;background:linear-gradient(90deg,#6366f1,#06b6d4);border-radius:3px"></div></div>
+      <span style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--text3)">${x.s}%</span>
+    </div>`).join('');
+}
+
+// ── MATRIX / TABLE BUILDERS ──
+function buildMatrix(){
+  const n=parseInt(document.getElementById('matrixSize').value);
+  let h=`<div class="matrix-grid" style="grid-template-columns:repeat(${n+1},1fr)">`;
+  for(let i=0;i<n;i++)for(let j=0;j<=n;j++)
+    h+=`<input type="number" id="m${i}_${j}" value="0" step="any" placeholder="${j<n?'a'+(i+1)+(j+1):'b'+(i+1)}"/>`;
+  h+=`</div><p style="font-size:0.68rem;color:var(--text3);margin-top:4px;font-family:'Fira Code',monospace">Last column = constants (b)</p>`;
+  document.getElementById('matrixContainer').innerHTML=h;
+}
+function fillSampleMatrix(){
+  const n=parseInt(document.getElementById('matrixSize').value);
+  const s={2:[[2,1,5],[1,3,7]],3:[[2,1,-1,8],[-3,-1,2,-11],[-2,1,2,-3]],4:[[2,1,0,0,3],[1,3,1,0,8],[0,1,4,1,9],[0,0,1,2,4]]};
+  (s[n]||s[3]).forEach((r,i)=>r.forEach((v,j)=>{const el=document.getElementById(`m${i}_${j}`);if(el)el.value=v;}));
+}
+function getMatrix(){
+  const n=parseInt(document.getElementById('matrixSize').value);
+  const A=[],b=[];
+  for(let i=0;i<n;i++){A.push([]);for(let j=0;j<n;j++)A[i].push(parseFloat(document.getElementById(`m${i}_${j}`).value)||0);b.push(parseFloat(document.getElementById(`m${i}_${n}`).value)||0);}
+  return{A,b,n};
+}
+function buildDataTable(){
+  const n=parseInt(document.getElementById('interpPoints').value);
+  let h='<div class="dt-wrap"><table class="dt"><thead><tr><th>x</th><th>f(x)</th></tr></thead><tbody>';
+  for(let i=0;i<n;i++)h+=`<tr><td><input type="number" id="dx${i}" value="${i}" step="any"/></td><td><input type="number" id="dy${i}" value="${i*i}" step="any"/></td></tr>`;
+  h+='</tbody></table></div>';
+  document.getElementById('dataTableContainer').innerHTML=h;
+}
+function fillSampleData(){
+  const n=parseInt(document.getElementById('interpPoints').value);
+  [1,2,3,4,5,6].slice(0,n).forEach((v,i)=>{document.getElementById(`dx${i}`).value=v;document.getElementById(`dy${i}`).value=v*v*v;});
+}
+function getDataPoints(){
+  const n=parseInt(document.getElementById('interpPoints').value);
+  return{xs:Array.from({length:n},(_,i)=>parseFloat(document.getElementById(`dx${i}`).value)||0),ys:Array.from({length:n},(_,i)=>parseFloat(document.getElementById(`dy${i}`).value)||0)};
+}
+function copyMatrix(A){return A.map(r=>[...r]);}
+
+// ── SOLVE DISPATCHER ──
+let gResult=null,chart1=null,chart2=null;
+
+function solve(){
+  const alert_=document.getElementById('solveAlert');
+  alert_.classList.remove('show');
+  try{
+    const type=document.getElementById('problemType').value;
+    let method=document.getElementById('methodSelect').value;
+    const tol=Math.pow(10,parseInt(document.getElementById('tolerance').value));
+    const maxIter=parseInt(document.getElementById('maxIter').value);
+    let result;
+    if(type==='root'){
+      if(method==='auto')method='newton';
+      result=solveRoot(method,tol,maxIter);
+    }else if(type==='linear'){
+      if(method==='auto')method='gauss';
+      result=solveLinear(method);
+    }else if(type==='interpolation'){
+      if(method==='auto')method='lagrange';
+      result=solveInterp(method);
+    }else if(type==='differentiation'){
+      if(method==='auto')method='central';
+      result=solveDiff(method);
+    }else if(type==='integration'){
+      if(method==='auto')method='simpson13';
+      result=solveInteg(method);
+    }else{
+      if(method==='auto')method='rk4';
+      result=solveODE(method,maxIter);
+    }
+    gResult=result;
+    showResult(result);
+  }catch(e){
+    alert_.textContent='Error: '+e.message;
+    alert_.classList.add('show');
+  }
+}
+
+function showResult(r){
+  document.getElementById('resultsCard').style.display='block';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('rVal').textContent=(r.label?r.label+' ':'')+r.value;
+  document.getElementById('rMeta').textContent=r.meta||'';
+  // Steps
+  document.getElementById('stepsContainer').innerHTML=r.steps.map((s,i)=>`
+    <div class="step-item">
+      <div class="step-hd" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span>Step ${i+1}: ${s.title}</span><span>›</span>
+      </div>
+      <div class="step-bd">${s.body}</div>
+    </div>`).join('');
+  // Iterations
+  if(r.iters&&r.iters.length){
+    document.getElementById('iterHead').innerHTML=r.headers.map(h=>`<th>${h}</th>`).join('');
+    document.getElementById('iterBody').innerHTML=r.iters.map(row=>`<tr>${r.fields.map(f=>`<td>${row[f]??'—'}</td>`).join('')}</tr>`).join('');
+  }
+  // Formula
+  document.getElementById('formulaContent').innerHTML=`<strong style="color:var(--accent);font-family:'Fira Code',monospace">${r.method}</strong><br><br>${r.formula}`;
+  // Charts
+  buildCharts(r);
+}
+
+function buildCharts(r){
+  if(chart1){chart1.destroy();chart1=null;}
+  if(chart2){chart2.destroy();chart2=null;}
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const gridColor=isDark?'rgba(100,120,255,0.08)':'rgba(99,102,241,0.08)';
+  const textColor=isDark?'#94a3b8':'#475569';
+  if(r.type==='root'||r.type==='interpolation'||r.type==='integration'||r.type==='ode'){
+    const ctx=document.getElementById('mainChart').getContext('2d');
+    let ds=[];
+    if(r.xs&&r.ys){
+      ds=[{label:r.type==='ode'?'y(x)':'f(x)',data:r.xs.map((x,i)=>({x,y:r.ys[i]})),borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.06)',fill:true,pointRadius:2,tension:0.4}];
+    }else if(r.iters){
+      const vals=r.iters.map((it,i)=>({x:i,y:parseFloat(it.root||it.x1||it.val||0)})).filter(p=>!isNaN(p.y));
+      ds=[{label:'Convergence',data:vals,borderColor:'#06b6d4',backgroundColor:'rgba(6,182,212,0.06)',fill:true,pointRadius:3,tension:0.3}];
+    }
+    if(ds.length)chart1=new Chart(ctx,{type:'line',data:{datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{x:{type:'linear',grid:{color:gridColor},ticks:{color:textColor}},y:{grid:{color:gridColor},ticks:{color:textColor}}},plugins:{legend:{labels:{color:textColor}}}}});
+  }
+  if(r.iters&&r.iters.length>1&&r.iters[0].err!==undefined){
+    const ctx2=document.getElementById('convChart').getContext('2d');
+    const errData=r.iters.map((it,i)=>({x:i+1,y:Math.abs(parseFloat(it.err)||0)})).filter(p=>p.y>0);
+    if(errData.length>1)chart2=new Chart(ctx2,{type:'line',data:{datasets:[{label:'Error',data:errData,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.06)',fill:true,pointRadius:3,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'Iteration',color:textColor},grid:{color:gridColor},ticks:{color:textColor}},y:{type:'logarithmic',title:{display:true,text:'Error',color:textColor},grid:{color:gridColor},ticks:{color:textColor}}},plugins:{legend:{labels:{color:textColor}}}}});
+  }
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id+'Pane').classList.add('active');
+  if(id==='chart'&&gResult)buildCharts(gResult);
+}
+
+function copyResult(){
+  if(gResult)navigator.clipboard.writeText(gResult.value).catch(()=>{});
+}
+
+function resetSolver(){
+  document.getElementById('resultsCard').style.display='none';
+  document.getElementById('emptyState').style.display='block';
+  document.getElementById('solveAlert').classList.remove('show');
+  gResult=null;
+}
+
+// ── ROOT FINDING ──
+function solveRoot(method,tol,maxIter){
+  const eq=document.getElementById('eqInput').value;
+  const a=parseFloat(document.getElementById('lowerBound').value);
+  const b=parseFloat(document.getElementById('upperBound').value);
+  const x0=parseFloat(document.getElementById('initialGuess').value);
+  const f=x=>mathEval(eq,x);
+  if(method==='bisection')return bisection(f,a,b,tol,maxIter,eq);
+  if(method==='newton')return newton(f,x0,tol,maxIter,eq);
+  if(method==='secant')return secant(f,a,b,tol,maxIter,eq);
+  if(method==='regula')return regulaFalsi(f,a,b,tol,maxIter,eq);
+  return newton(f,x0,tol,maxIter,eq);
+}
+function bisection(f,a,b,tol,maxIter,eq){
+  const steps=[],iters=[];
+  steps.push({title:'Setup',body:`f(x) = ${eq}<br>Interval [${a}, ${b}]`});
+  steps.push({title:'Formula',body:`<div class="formula">c = (a + b) / 2</div>`});
+  let c=a;
+  for(let i=1;i<=maxIter;i++){
+    c=(a+b)/2;const fc=f(c),fa=f(a),err=Math.abs(b-a)/2;
+    iters.push({n:i,a:fmt(a,6),b:fmt(b,6),c:fmt(c,6),fc:fmt(fc,6),err:fmt(err,8)});
+    if(i<=3)steps.push({title:`Iteration ${i}`,body:`c=${fmt(c,6)}, f(c)=${fmt(fc,6)}, err=${fmt(err,8)}`});
+    if(err<tol)break;
+    if(fa*fc<0)b=c;else a=c;
+  }
+  const xs=Array.from({length:100},(_,i)=>{const t=a-1+i*(b-a+2)/99;return t;});
+  return{value:fmt(c,10),label:'Root x =',meta:`Bisection · ${iters.length} iterations`,method:'Bisection',iters,steps,headers:['n','a','b','c','f(c)','Error'],fields:['n','a','b','c','fc','err'],formula:'c = (a + b) / 2; update bracket based on sign change',xs,ys:xs.map(f),type:'root'};
+}
+function newton(f,x0,tol,maxIter,eq){
+  const steps=[],iters=[];
+  steps.push({title:'Setup',body:`f(x) = ${eq}<br>x₀ = ${x0}`});
+  steps.push({title:'Formula',body:`<div class="formula">x₁ = x₀ - f(x₀)/f'(x₀)</div>`});
+  let x=x0;
+  for(let i=1;i<=maxIter;i++){
+    const fx=f(x),fpx=deriv(eq,x),x1=x-fx/fpx,err=Math.abs(x1-x);
+    iters.push({n:i,x:fmt(x,6),fx:fmt(fx,6),fpx:fmt(fpx,6),x1:fmt(x1,6),err:fmt(err,8)});
+    if(i<=3)steps.push({title:`Iteration ${i}`,body:`x=${fmt(x,6)}, f(x)=${fmt(fx,6)}, x₁=${fmt(x1,8)}`});
+    x=x1;if(err<tol)break;
+  }
+  const xs=Array.from({length:100},(_,i)=>x-2+i*4/99);
+  return{value:fmt(x,10),label:'Root x =',meta:`Newton-Raphson · ${iters.length} iterations`,method:'Newton-Raphson',iters,steps,headers:['n','xₙ','f(xₙ)','f\'(xₙ)','xₙ₊₁','Error'],fields:['n','x','fx','fpx','x1','err'],formula:"x₁ = x₀ - f(x₀)/f'(x₀)",xs,ys:xs.map(f),type:'root'};
+}
+function secant(f,a,b,tol,maxIter,eq){
+  const steps=[],iters=[];
+  steps.push({title:'Formula',body:`<div class="formula">x₂ = x₁ - f(x₁)(x₁-x₀)/(f(x₁)-f(x₀))</div>`});
+  let x0=a,x1=b;
+  for(let i=1;i<=maxIter;i++){
+    const f0=f(x0),f1=f(x1),x2=x1-f1*(x1-x0)/(f1-f0),err=Math.abs(x2-x1);
+    iters.push({n:i,x0:fmt(x0,6),x1:fmt(x1,6),x2:fmt(x2,6),err:fmt(err,8)});
+    if(i<=3)steps.push({title:`Iteration ${i}`,body:`x₂ = ${fmt(x2,8)}, err = ${fmt(err,8)}`});
+    x0=x1;x1=x2;if(err<tol)break;
+  }
+  const xs=Array.from({length:100},(_,i)=>a-1+i*(b-a+2)/99);
+  return{value:fmt(x1,10),label:'Root x =',meta:`Secant · ${iters.length} iterations`,method:'Secant',iters,steps,headers:['n','x₀','x₁','x₂','Error'],fields:['n','x0','x1','x2','err'],formula:'x₂ = x₁ - f(x₁)(x₁-x₀)/(f(x₁)-f(x₀))',xs,ys:xs.map(f),type:'root'};
+}
+function regulaFalsi(f,a,b,tol,maxIter,eq){
+  const steps=[],iters=[];
+  steps.push({title:'Formula',body:`<div class="formula">c = a - f(a)(b-a)/(f(b)-f(a))</div>`});
+  let c=a;
+  for(let i=1;i<=maxIter;i++){
+    c=a-f(a)*(b-a)/(f(b)-f(a));const fc=f(c),err=Math.abs(fc);
+    iters.push({n:i,a:fmt(a,6),b:fmt(b,6),c:fmt(c,6),fc:fmt(fc,6),err:fmt(err,8)});
+    if(i<=3)steps.push({title:`Iteration ${i}`,body:`c=${fmt(c,8)}, f(c)=${fmt(fc,8)}`});
+    if(err<tol)break;
+    if(f(a)*fc<0)b=c;else a=c;
+  }
+  const xs=Array.from({length:100},(_,i)=>a-1+i*(b-a+2)/99);
+  return{value:fmt(c,10),label:'Root x =',meta:`Regula Falsi · ${iters.length} iterations`,method:'Regula Falsi',iters,steps,headers:['n','a','b','c','f(c)','Error'],fields:['n','a','b','c','fc','err'],formula:'c = a - f(a)(b-a)/(f(b)-f(a))',xs,ys:xs.map(f),type:'root'};
+}
+
+// ── LINEAR SYSTEMS ──
+function solveLinear(method){
+  const{A,b,n}=getMatrix();
+  if(method==='gauss')return gaussElim(A,b,n);
+  if(method==='gaussJordan')return gaussJordan(A,b,n);
+  if(method==='lu')return luDecomp(A,b,n);
+  if(method==='jacobi')return jacobi(A,b,n,Math.pow(10,parseInt(document.getElementById('tolerance').value)),parseInt(document.getElementById('maxIter').value));
+  if(method==='gaussSeidel')return gaussSeidel(A,b,n,Math.pow(10,parseInt(document.getElementById('tolerance').value)),parseInt(document.getElementById('maxIter').value));
+  return gaussElim(A,b,n);
+}
+function gaussElim(A,b,n){
+  const M=copyMatrix(A),r=[...b];const steps=[],iters=[];
+  steps.push({title:'Augmented Matrix',body:'[A|b] formed. Forward elimination begins.'});
+  for(let k=0;k<n;k++){
+    for(let i=k+1;i<n;i++){const m=M[i][k]/M[k][k];r[i]-=m*r[k];for(let j=k;j<n;j++)M[i][j]-=m*M[k][j];}}
+  const x=new Array(n);
+  for(let i=n-1;i>=0;i--){x[i]=r[i];for(let j=i+1;j<n;j++)x[i]-=M[i][j]*x[j];x[i]/=M[i][i];}
+  x.forEach((v,i)=>iters.push({var:`x${i+1}`,val:fmt(v,8)}));
+  steps.push({title:'Back Substitution',body:'x = ['+x.map((v,i)=>`x${i+1}=${fmt(v,6)}`).join(', ')+']'});
+  return{value:x.map((v,i)=>`x${i+1}=${fmt(v,6)}`).join(', '),label:'Solution',meta:'Gauss Elimination',method:'Gauss Elimination',iters,steps,headers:['Variable','Value'],fields:['var','val'],formula:'Forward elimination → upper triangular → back substitution',type:'linear'};
+}
+function gaussJordan(A,b,n){
+  const M=A.map((r,i)=>[...r,b[i]]);const steps=[],iters=[];
+  steps.push({title:'Augmented Matrix',body:'[A|b] formed. Full reduction (RREF) in progress.'});
+  for(let k=0;k<n;k++){
+    const piv=M[k][k];for(let j=k;j<=n;j++)M[k][j]/=piv;
+    for(let i=0;i<n;i++)if(i!==k){const f=M[i][k];for(let j=k;j<=n;j++)M[i][j]-=f*M[k][j];}
+  }
+  const x=M.map(r=>r[n]);
+  x.forEach((v,i)=>iters.push({var:`x${i+1}`,val:fmt(v,8)}));
+  steps.push({title:'Solution',body:'x = ['+x.map((v,i)=>`x${i+1}=${fmt(v,6)}`).join(', ')+']'});
+  return{value:x.map((v,i)=>`x${i+1}=${fmt(v,6)}`).join(', '),label:'Solution',meta:'Gauss-Jordan',method:'Gauss-Jordan',iters,steps,headers:['Variable','Value'],fields:['var','val'],formula:'Reduce [A|b] to [I|x] via row operations',type:'linear'};
+}
+function luDecomp(A,b,n){
+  const L=Array.from({length:n},(_,i)=>new Array(n).fill(0)),U=copyMatrix(A);const steps=[],iters=[];
+  for(let i=0;i<n;i++)L[i][i]=1;
+  steps.push({title:'LU Decomposition',body:'Computing L and U such that A = L·U'});
+  for(let k=0;k<n;k++)for(let i=k+1;i<n;i++){L[i][k]=U[i][k]/U[k][k];for(let j=k;j<n;j++)U[i][j]-=L[i][k]*U[k][j];}
+  const y=new Array(n);
+  for(let i=0;i<n;i++){y[i]=b[i];for(let j=0;j<i;j++)y[i]-=L[i][j]*y[j];}
+  const x=new Array(n);
+  for(let i=n-1;i>=0;i--){x[i]=y[i];for(let j=i+1;j<n;j++)x[i]-=U[i][j]*x[j];x[i]/=U[i][i];}
+  x.forEach((v,i)=>iters.push({var:`x${i+1}`,val:fmt(v,8)}));
+  steps.push({title:'Back Sub (Ux=y)',body:'x = ['+x.map((v,i)=>`x${i+1}=${fmt(v,6)}`).join(', ')+']'});
+  return{value:x.map((v,i)=>`x${i+1}=${fmt(v,6)}`).join(', '),label:'Solution',meta:'LU factorization',method:'LU Decomposition',iters,steps,headers:['Variable','Value'],fields:['var','val'],formula:'A=LU; Ly=b (fwd), Ux=y (back)',type:'linear'};
+}
+function jacobi(A,b,n,tol,maxIter){
+  const steps=[],iters=[];
+  steps.push({title:'Setup',body:'Starting x=0. Each iteration uses OLD values.'});
+  steps.push({title:'Formula',body:`<div class="formula">xᵢ = (bᵢ - Σⱼ≠ᵢ aᵢⱼxⱼ) / aᵢᵢ</div>`});
+  let x=new Array(n).fill(0);
+  for(let it=1;it<=maxIter;it++){
+    const xn=new Array(n).fill(0);
+    for(let i=0;i<n;i++){let s=b[i];for(let j=0;j<n;j++)if(j!==i)s-=A[i][j]*x[j];xn[i]=s/A[i][i];}
+    const err=Math.max(...xn.map((v,i)=>Math.abs(v-x[i])));
+    const row={n:it,err:fmt(err,8)};xn.forEach((v,i)=>row[`x${i+1}`]=fmt(v,6));iters.push(row);
+    if(it<=3)steps.push({title:`Iteration ${it}`,body:'x = ['+xn.map((v,i)=>`x${i+1}=${fmt(v,5)}`).join(', ')+`], err=${fmt(err,8)}`});
+    x=xn;if(err<tol)break;
+  }
+  return{value:x.map((v,i)=>`x${i+1}=${fmt(v,6)}`).join(', '),label:'Solution',meta:`${iters.length} iterations`,method:'Jacobi',iters,steps,headers:['n','x1','x2','x3','Error'],fields:['n','x1','x2','x3','err'],formula:'xᵢ = (bᵢ - Σ aᵢⱼxⱼ) / aᵢᵢ',type:'linear'};
+}
+function gaussSeidel(A,b,n,tol,maxIter){
+  const steps=[],iters=[];
+  steps.push({title:'Setup',body:'Like Jacobi but uses UPDATED values immediately. Faster convergence.'});
+  steps.push({title:'Formula',body:`<div class="formula">xᵢ = (bᵢ - Σⱼ&lt;ᵢ aᵢⱼxⱼ⁽ᵏ⁺¹⁾ - Σⱼ&gt;ᵢ aᵢⱼxⱼ⁽ᵏ⁾) / aᵢᵢ</div>`});
+  let x=new Array(n).fill(0);
+  for(let it=1;it<=maxIter;it++){
+    const xOld=[...x];
+    for(let i=0;i<n;i++){let s=b[i];for(let j=0;j<n;j++)if(j!==i)s-=A[i][j]*x[j];x[i]=s/A[i][i];}
+    const err=Math.max(...x.map((v,i)=>Math.abs(v-xOld[i])));
+    const row={n:it,err:fmt(err,8)};x.forEach((v,i)=>row[`x${i+1}`]=fmt(v,6));iters.push(row);
+    if(it<=3)steps.push({title:`Iteration ${it}`,body:'x = ['+x.map((v,i)=>`x${i+1}=${fmt(v,5)}`).join(', ')+`], err=${fmt(err,8)}`});
+    if(err<tol)break;
+  }
+  return{value:x.map((v,i)=>`x${i+1}=${fmt(v,6)}`).join(', '),label:'Solution',meta:`${iters.length} iterations`,method:'Gauss-Seidel',iters,steps,headers:['n','x1','x2','x3','Error'],fields:['n','x1','x2','x3','err'],formula:'Uses updated values immediately within each iteration',type:'linear'};
+}
+
+// ── INTERPOLATION ──
+function solveInterp(method){
+  const{xs,ys}=getDataPoints();
+  const xv=parseFloat(document.getElementById('interpX').value);
+  if(method==='lagrange')return lagrange(xs,ys,xv);
+  if(method==='newtonForward')return newtonForward(xs,ys,xv);
+  if(method==='newtonBackward')return newtonBackward(xs,ys,xv);
+  if(method==='dividedDiff')return dividedDiff(xs,ys,xv);
+  return lagrange(xs,ys,xv);
+}
+function lagrange(xs,ys,xv){
+  const n=xs.length;let yv=0;const steps=[];
+  steps.push({title:'Lagrange Formula',body:`<div class="formula">P(x) = Σᵢ yᵢ · Lᵢ(x)<br>Lᵢ(x) = Π_{j≠i} (x-xⱼ)/(xᵢ-xⱼ)</div>`});
+  for(let i=0;i<n;i++){
+    let L=1;for(let j=0;j<n;j++)if(j!==i)L*=(xv-xs[j])/(xs[i]-xs[j]);
+    yv+=ys[i]*L;
+    steps.push({title:`L${i}(x)`,body:`L${i}(${xv}) = <code>${fmt(L,6)}</code>, contribution = <code>${fmt(ys[i]*L,6)}</code>`});
+  }
+  const iters=xs.map((x,i)=>({x:fmt(x,4),y:fmt(ys[i],4)}));
+  return{value:fmt(yv,8),label:`P(${xv}) =`,meta:'Lagrange Interpolation',method:'Lagrange',iters,steps,headers:['x','y'],fields:['x','y'],formula:'P(x) = Σ yᵢ·Lᵢ(x)',xs,ys,type:'interpolation'};
+}
+function newtonForward(xs,ys,xv){
+  const n=xs.length,h=xs[1]-xs[0];
+  const dd=Array.from({length:n},(_,i)=>[...ys]);
+  for(let j=1;j<n;j++)for(let i=0;i<n-j;i++)dd[i][j]=dd[i+1][j-1]-dd[i][j-1];
+  const s=(xv-xs[0])/h;let y=dd[0][0];
+  const steps=[{title:'Difference Table',body:'Δ⁰y=['+ys.map(v=>fmt(v,4)).join(', ')+']'},{title:'Formula',body:`<div class="formula">P(x) = y₀ + s·Δy₀ + s(s-1)/2!·Δ²y₀ + ...</div>where s = ${fmt(s,4)}`}];
+  const iters=[{n:0,val:fmt(dd[0][0],6),delta:'—'}];
+  for(let k=1;k<n;k++){
+    let num=1;for(let m=0;m<k;m++)num*=(s-m);const term=num/factorial(k)*dd[0][k];y+=term;
+    iters.push({n:k,val:fmt(dd[0][k],6),delta:fmt(term,6)});
+    if(k<=3)steps.push({title:`Term k=${k}`,body:`Δᵏy₀ = <code>${fmt(dd[0][k],6)}</code>, term = <code>${fmt(term,8)}</code>`});
+  }
+  return{value:fmt(y,8),label:`P(${xv}) =`,meta:'Newton Forward',method:'Newton Forward',iters,steps,headers:['k','Δᵏy₀','Contribution'],fields:['n','val','delta'],formula:'P(x) = y₀ + s·Δy₀ + s(s-1)/2!·Δ²y₀ + ...',xs,ys,type:'interpolation'};
+}
+function newtonBackward(xs,ys,xv){
+  const n=xs.length,h=xs[1]-xs[0];
+  const dd=Array.from({length:n},(_,i)=>[...ys]);
+  for(let j=1;j<n;j++)for(let i=n-1;i>=j;i--)dd[i][j]=dd[i][j-1]-dd[i-1][j-1];
+  const s=(xv-xs[n-1])/h;let y=dd[n-1][0];
+  const steps=[{title:'Setup',body:`s = (x - xₙ)/h = ${fmt(s,4)}`},{title:'Formula',body:`<div class="formula">P(x) = yₙ + s·∇yₙ + s(s+1)/2!·∇²yₙ + ...</div>`}];
+  const iters=[{n:0,val:fmt(dd[n-1][0],6),delta:'—'}];
+  for(let k=1;k<n;k++){
+    let num=1;for(let m=0;m<k;m++)num*=(s+m);const term=num/factorial(k)*dd[n-1][k];y+=term;
+    iters.push({n:k,val:fmt(dd[n-1][k],6),delta:fmt(term,6)});
+  }
+  return{value:fmt(y,8),label:`P(${xv}) =`,meta:'Newton Backward',method:'Newton Backward',iters,steps,headers:['k','∇ᵏyₙ','Contribution'],fields:['n','val','delta'],formula:'P(x) = yₙ + s·∇yₙ + ...',xs,ys,type:'interpolation'};
+}
+function dividedDiff(xs,ys,xv){
+  const n=xs.length;const T=Array.from({length:n},(_,i)=>[ys[i]]);
+  for(let j=1;j<n;j++)for(let i=0;i<n-j;i++)T[i].push((T[i+1][j-1]-T[i][j-1])/(xs[i+j]-xs[i]));
+  let y=T[0][0],prod=1;
+  const steps=[{title:'Formula',body:`<div class="formula">P(x) = f[x₀] + (x-x₀)f[x₀,x₁] + ...</div>`}];
+  const iters=[{n:0,coeff:fmt(T[0][0],6),term:fmt(T[0][0],6)}];
+  for(let k=1;k<n;k++){prod*=(xv-xs[k-1]);const term=T[0][k]*prod;y+=term;iters.push({n:k,coeff:fmt(T[0][k],6),term:fmt(term,6)});}
+  return{value:fmt(y,8),label:`P(${xv}) =`,meta:'Divided Differences',method:'Divided Differences',iters,steps,headers:['k','Coeff','Term'],fields:['n','coeff','term'],formula:'P(x) = Σ f[x₀..xₖ]·(x-x₀)···(x-xₖ₋₁)',xs,ys,type:'interpolation'};
+}
+function factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
+
+// ── DIFFERENTIATION ──
+function solveDiff(method){
+  const eq=document.getElementById('diffEq').value;
+  const x=parseFloat(document.getElementById('diffX').value);
+  const h=parseFloat(document.getElementById('diffH').value);
+  const f0=mathEval(eq,x),fp=mathEval(eq,x+h),fm=mathEval(eq,x-h);
+  let val,formula,name;
+  if(method==='forward'){val=(fp-f0)/h;formula="f'(x) = [f(x+h) - f(x)] / h";name='Forward Difference';}
+  else if(method==='backward'){val=(f0-fm)/h;formula="f'(x) = [f(x) - f(x-h)] / h";name='Backward Difference';}
+  else{val=(fp-fm)/(2*h);formula="f'(x) = [f(x+h) - f(x-h)] / 2h";name='Central Difference';}
+  const steps=[
+    {title:'Setup',body:`f(x) = ${eq}<br>x = ${x}, h = ${h}`},
+    {title:'Formula',body:`<div class="formula">${formula}</div>`},
+    {title:'Computation',body:`f(x-h) = <code>${fmt(fm,8)}</code><br>f(x) = <code>${fmt(f0,8)}</code><br>f(x+h) = <code>${fmt(fp,8)}</code><br>f'(${x}) = <code>${fmt(val,8)}</code>`}
+  ];
+  const iters=[{pt:'f(x-h)',val:fmt(fm,8)},{pt:'f(x)',val:fmt(f0,8)},{pt:'f(x+h)',val:fmt(fp,8)},{pt:"f'(x)",val:fmt(val,8)}];
+  return{value:fmt(val,8),label:`f'(${x}) =`,meta:name,method:name,iters,steps,headers:['Point','Value'],fields:['pt','val'],formula,type:'diff'};
+}
+
+// ── INTEGRATION ──
+function solveInteg(method){
+  const eq=document.getElementById('integEq').value;
+  const a=parseFloat(document.getElementById('integA').value);
+  const b=parseFloat(document.getElementById('integB').value);
+  const n=parseInt(document.getElementById('integN').value);
+  const h=(b-a)/n;
+  const xs=Array.from({length:n+1},(_,i)=>a+i*h);
+  const fs=xs.map(x=>mathEval(eq,x));
+  let val,formula,name;
+  if(method==='trapezoidal'){
+    val=h/2*(fs[0]+2*fs.slice(1,-1).reduce((s,v)=>s+v,0)+fs[n]);
+    formula='∫ ≈ h/2 [f(x₀) + 2Σf(xᵢ) + f(xₙ)]';name='Trapezoidal';
+  }else if(method==='simpson13'){
+    if(n%2!==0)throw new Error('Simpson 1/3 needs even n');
+    const odd=fs.filter((_,i)=>i%2===1&&i<n).reduce((s,v)=>s+v,0);
+    const even=fs.filter((_,i)=>i%2===0&&i>0&&i<n).reduce((s,v)=>s+v,0);
+    val=h/3*(fs[0]+4*odd+2*even+fs[n]);
+    formula='∫ ≈ h/3 [f₀ + 4f₁ + 2f₂ + 4f₃ + ... + fₙ]';name="Simpson 1/3";
+  }else{
+    if(n%3!==0)throw new Error('Simpson 3/8 needs n divisible by 3');
+    let s=fs[0]+fs[n];
+    for(let i=1;i<n;i++)s+=(i%3===0?2:3)*fs[i];
+    val=3*h/8*s;formula='∫ ≈ 3h/8 [f₀ + 3f₁ + 3f₂ + 2f₃ + ...]';name="Simpson 3/8";
+  }
+  const steps=[{title:'Setup',body:`f(x)=${eq}, [a,b]=[${a},${b}], n=${n}, h=${fmt(h,5)}`},{title:'Formula',body:`<div class="formula">${formula}</div>`},{title:'Result',body:`∫f(x)dx from ${a} to ${b} ≈ <code>${fmt(val,8)}</code>`}];
+  const iters=xs.map((x,i)=>({i,x:fmt(x,4),fx:fmt(fs[i],6)}));
+  return{value:fmt(val,8),label:'∫ ≈',meta:name,method:name,iters,steps,headers:['i','xᵢ','f(xᵢ)'],fields:['i','x','fx'],formula,xs,ys:fs,type:'integration'};
+}
+
+// ── ODE ──
+function solveODE(method,maxIter){
+  const eq=document.getElementById('odeEq').value;
+  const x0=parseFloat(document.getElementById('odeX0').value);
+  const y0=parseFloat(document.getElementById('odeY0').value);
+  const xEnd=parseFloat(document.getElementById('odeXEnd').value);
+  const h=parseFloat(document.getElementById('odeH').value);
+  const f=(x,y)=>mathEval(eq,x,y);
+  const xs=[x0],ys=[y0],iters=[{n:0,x:fmt(x0,4),y:fmt(y0,8)}];
+  let x=x0,y=y0;
+  const steps=[{title:'Setup',body:`dy/dx = ${eq}<br>x₀=${x0}, y₀=${y0}, h=${h}, x_end=${xEnd}`}];
+  if(method==='euler'){
+    steps.push({title:'Formula',body:`<div class="formula">yₙ₊₁ = yₙ + h·f(xₙ,yₙ)</div>`});
+    while(x<xEnd-1e-10){const yn=y+h*f(x,y);x=parseFloat((x+h).toFixed(10));y=yn;xs.push(x);ys.push(y);iters.push({n:iters.length,x:fmt(x,4),y:fmt(y,8)});}
+  }else if(method==='modEuler'){
+    steps.push({title:'Formula',body:`<div class="formula">Predictor: y* = yₙ + h·f(xₙ,yₙ)<br>Corrector: yₙ₊₁ = yₙ + h/2·[f(xₙ,yₙ) + f(xₙ₊₁,y*)]</div>`});
+    while(x<xEnd-1e-10){const k1=f(x,y),yp=y+h*k1,xn=parseFloat((x+h).toFixed(10)),k2=f(xn,yp);y+=(h/2)*(k1+k2);x=xn;xs.push(x);ys.push(y);iters.push({n:iters.length,x:fmt(x,4),y:fmt(y,8)});}
+  }else{
+    steps.push({title:'RK4 Formula',body:`<div class="formula">k₁=h·f(x,y), k₂=h·f(x+h/2,y+k₁/2)<br>k₃=h·f(x+h/2,y+k₂/2), k₄=h·f(x+h,y+k₃)<br>yₙ₊₁ = yₙ + (k₁+2k₂+2k₃+k₄)/6</div>`});
+    while(x<xEnd-1e-10){
+      const k1=h*f(x,y),k2=h*f(x+h/2,y+k1/2),k3=h*f(x+h/2,y+k2/2),k4=h*f(x+h,y+k3);
+      y+=(k1+2*k2+2*k3+k4)/6;x=parseFloat((x+h).toFixed(10));xs.push(x);ys.push(y);
+      iters.push({n:iters.length,x:fmt(x,4),y:fmt(y,8)});
+    }
+  }
+  steps.push({title:'Final Result',body:`y(${xEnd}) ≈ <code>${fmt(y,8)}</code>`});
+  return{value:fmt(y,8),label:`y(${xEnd}) ≈`,meta:`${method.toUpperCase()} · ${iters.length} steps`,method:method.toUpperCase(),iters,steps,headers:['n','x','y'],fields:['n','x','y'],formula:'ODE solver',xs,ys,type:'ode'};
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded',()=>{
+  buildMatrix();buildDataTable();updateRec('root');
+});
+</script>
+</body>
+</html>
